@@ -1,0 +1,656 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="color-scheme" content="light dark" />
+<link rel="icon" href="data:," />
+<title>タップ一括表記ツール</title>
+<style>
+  :root{
+    --bg:#eef0ec;
+    --panel:#ffffff;
+    --panel-2:#f6f7f4;
+    --ink:#1d262b;
+    --ink-2:#4c5a61;
+    --ink-3:#7c8a90;
+    --line:#d5dbd6;
+    --line-strong:#b9c4bd;
+    --accent:#0e5a6d;
+    --accent-ink:#ffffff;
+    --accent-soft:#e2eff1;
+    --amber:#a8640a;
+    --amber-soft:#fdf0dc;
+    --output-bg:#17242b;
+    --output-ink:#eef6f7;
+    --output-sub:#9db8be;
+    --grid-line:rgba(14,90,109,.07);
+    --shadow:0 1px 2px rgba(20,35,40,.06),0 8px 24px rgba(20,35,40,.06);
+    --radius:10px;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{
+      --bg:#121719;
+      --panel:#1b2225;
+      --panel-2:#20282b;
+      --ink:#e8eded;
+      --ink-2:#b3bfc2;
+      --ink-3:#849499;
+      --line:#333f43;
+      --line-strong:#48565b;
+      --accent:#3aa3b8;
+      --accent-ink:#0d1d21;
+      --accent-soft:#17333a;
+      --amber:#e0a04a;
+      --amber-soft:#3a2c15;
+      --output-bg:#0b1418;
+      --output-ink:#eef6f7;
+      --output-sub:#8fb0b8;
+      --grid-line:rgba(120,200,215,.06);
+      --shadow:0 1px 2px rgba(0,0,0,.3),0 8px 24px rgba(0,0,0,.25);
+    }
+  }
+  *{box-sizing:border-box}
+  html{-webkit-text-size-adjust:100%}
+  body{
+    margin:0;background:var(--bg);color:var(--ink);
+    font-family:"Hiragino Kaku Gothic ProN","Hiragino Sans","Yu Gothic UI","Yu Gothic",Meiryo,system-ui,-apple-system,"Segoe UI",sans-serif;
+    font-size:15px;line-height:1.65;
+  }
+  .mono{font-family:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace}
+  .wrap{max-width:1120px;margin:0 auto;padding:28px 20px 56px}
+
+  header.page-head{margin-bottom:20px}
+  header.page-head h1{font-size:26px;line-height:1.3;margin:0 0 6px;font-weight:800;letter-spacing:.01em}
+  header.page-head p{margin:0;color:var(--ink-2);max-width:44em}
+
+  .layout{display:grid;grid-template-columns:360px 1fr;gap:18px;align-items:start}
+  @media (max-width:860px){.layout{grid-template-columns:1fr}}
+
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow)}
+  .card-h{padding:14px 18px 10px;border-bottom:1px solid var(--line);display:flex;align-items:baseline;justify-content:space-between;gap:10px}
+  .card-h h2{font-size:15px;margin:0;font-weight:800}
+  .card-h span{font-size:12px;color:var(--ink-3)}
+  .card-b{padding:16px 18px 18px}
+
+  /* form */
+  fieldset{border:0;margin:0 0 18px;padding:0}
+  fieldset:last-child{margin-bottom:0}
+  legend,.flabel{display:block;font-size:12.5px;font-weight:700;color:var(--ink-2);letter-spacing:.04em;margin:0 0 7px;padding:0}
+  .seg{display:flex;border:1px solid var(--line-strong);border-radius:8px;overflow:hidden}
+  .seg button{
+    flex:1;appearance:none;border:0;background:var(--panel-2);color:var(--ink-2);
+    font:inherit;font-size:14px;font-weight:700;padding:9px 6px;cursor:pointer;
+  }
+  .seg button + button{border-left:1px solid var(--line-strong)}
+  .seg button[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink)}
+  .seg button:focus-visible,button.copy:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+  .row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .row2 .field{min-width:0}
+  .field{margin-bottom:12px}
+  .field:last-child{margin-bottom:0}
+  input[type="number"],input[type="text"],select{
+    width:100%;font:inherit;font-size:15px;color:var(--ink);
+    background:var(--panel);border:1px solid var(--line-strong);border-radius:8px;
+    padding:9px 10px;min-height:42px;
+  }
+  input:disabled{opacity:.45}
+  .unit-wrap{position:relative}
+  .unit-wrap input{padding-right:44px}
+  .unit-wrap .unit{position:absolute;right:11px;top:50%;transform:translateY(-50%);font-size:12.5px;color:var(--ink-3);pointer-events:none}
+  .hint{font-size:12.5px;color:var(--ink-3);margin-top:5px;line-height:1.55}
+  .hint b{color:var(--ink-2)}
+  .cond{display:none}
+  .cond.show{display:block}
+  .divider{border-top:1px dashed var(--line);margin:16px 0}
+
+  /* outputs */
+  .stack{display:flex;flex-direction:column;gap:18px;min-width:0}
+  .out-list{display:flex;flex-direction:column;gap:12px}
+  .out{
+    background:var(--output-bg);border-radius:8px;padding:13px 14px 13px 16px;
+    display:flex;align-items:center;gap:12px;
+  }
+  .out .txt{min-width:0;flex:1}
+  .out .lbl{font-size:11.5px;letter-spacing:.06em;color:var(--output-sub);font-weight:700;margin-bottom:2px}
+  .out .val{color:var(--output-ink);font-size:19px;font-weight:700;letter-spacing:.02em;overflow-wrap:anywhere;line-height:1.4}
+  .out.main .val{font-size:23px}
+  .out.main{border:1px solid var(--accent)}
+  button.copy{
+    flex:none;appearance:none;border:1px solid rgba(255,255,255,.28);background:transparent;color:var(--output-ink);
+    font:inherit;font-size:13px;font-weight:700;border-radius:7px;padding:8px 13px;cursor:pointer;min-height:40px;
+  }
+  button.copy:hover{background:rgba(255,255,255,.1)}
+  button.copy.done{border-color:#57c785;color:#8fe3ae}
+  .checkline{
+    display:flex;flex-wrap:wrap;gap:8px 18px;background:var(--amber-soft);border-radius:8px;
+    padding:10px 14px;font-size:13.5px;color:var(--ink);
+  }
+  .checkline b{color:var(--amber)}
+  .checkline .mono{font-weight:700}
+
+  /* preview */
+  .preview{
+    border:1px solid var(--line);border-radius:8px;overflow:hidden;
+    background:
+      linear-gradient(var(--grid-line) 1px,transparent 1px),
+      linear-gradient(90deg,var(--grid-line) 1px,transparent 1px),
+      var(--panel-2);
+    background-size:22px 22px;
+  }
+  .preview svg{display:block;width:100%;height:auto}
+  .fig-note{font-size:12.5px;color:var(--ink-3);margin-top:9px}
+
+  /* reference table */
+  .ref-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+  @media (max-width:560px){.ref-grid{grid-template-columns:1fr}}
+  .ref{background:var(--panel-2);border:1px solid var(--line);border-radius:8px;padding:11px 13px}
+  .ref .k{font-size:12px;color:var(--ink-3);font-weight:700;letter-spacing:.04em}
+  .ref .v{font-size:18px;font-weight:800;margin-top:1px}
+  .ref .v small{font-size:12.5px;color:var(--ink-2);font-weight:600}
+
+  .notes{margin:0;padding-left:1.25em;color:var(--ink-2);font-size:14px}
+  .notes li{margin-bottom:6px}
+  .notes li:last-child{margin-bottom:0}
+  .notes b{color:var(--ink)}
+  .notes .mono{font-size:13.5px;background:var(--accent-soft);border-radius:4px;padding:0 5px;color:var(--ink)}
+
+  .toast{
+    position:fixed;left:50%;bottom:26px;transform:translate(-50%,16px);opacity:0;pointer-events:none;
+    background:var(--output-bg);color:var(--output-ink);font-size:14px;font-weight:700;
+    padding:11px 20px;border-radius:999px;box-shadow:0 10px 28px rgba(0,0,0,.28);
+    transition:opacity .18s ease,transform .18s ease;z-index:20;max-width:88vw;text-align:center;
+  }
+  .toast.show{opacity:1;transform:translate(-50%,0)}
+  @media (prefers-reduced-motion: reduce){.toast{transition:none}}
+  @media (max-width:560px){
+    .wrap{padding:20px 14px 44px}
+    header.page-head h1{font-size:22px}
+    .out .val{font-size:17px}
+    .out.main .val{font-size:20px}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="page-head">
+    <h1>タップ一括表記ツール</h1>
+    <p>等ピッチで並ぶ複数のタップ穴について、引出線注記と繰り返しピッチ寸法のテキストを自動で組み立てます。数値を変えると、その場でプレビューと表記が更新されます。</p>
+  </header>
+
+  <div class="layout">
+
+    <!-- ===== 入力 ===== -->
+    <section class="card" aria-label="入力条件">
+      <div class="card-h"><h2>条件入力</h2><span>初期値：M4通し・15個・150ピッチ</span></div>
+      <div class="card-b">
+
+        <fieldset>
+          <legend>配置</legend>
+          <div class="seg" role="group" aria-label="配置の選択">
+            <button type="button" id="segLinear" aria-pressed="true">直線配置</button>
+            <button type="button" id="segCircular" aria-pressed="false">円周配置</button>
+          </div>
+        </fieldset>
+
+        <fieldset>
+          <legend>ねじ</legend>
+          <div class="row2">
+            <div class="field">
+              <label class="flabel" for="threadSize">ねじの呼び</label>
+              <select id="threadSize">
+                <option value="3">M3</option>
+                <option value="4" selected>M4</option>
+                <option value="5">M5</option>
+                <option value="6">M6</option>
+                <option value="8">M8</option>
+                <option value="10">M10</option>
+                <option value="12">M12</option>
+                <option value="16">M16</option>
+                <option value="20">M20</option>
+              </select>
+            </div>
+            <div class="field">
+              <label class="flabel" for="threadKind">ねじピッチの表記</label>
+              <select id="threadKind">
+                <option value="coarse" selected>並目（省略）</option>
+                <option value="fine">細目（数値を付ける）</option>
+              </select>
+            </div>
+          </div>
+          <div class="field cond" id="finePitchField">
+            <label class="flabel" for="finePitch">細目ピッチ</label>
+            <div class="unit-wrap">
+              <input type="number" id="finePitch" value="0.5" min="0.1" step="0.05" inputmode="decimal" />
+              <span class="unit">mm</span>
+            </div>
+            <div class="hint">例：M4細目は <b>M4×0.5</b> のようにピッチ表記が必須です。</div>
+          </div>
+          <div class="hint" id="coarseInfo"></div>
+        </fieldset>
+
+        <fieldset>
+          <legend>個数とピッチ</legend>
+          <div class="row2">
+            <div class="field">
+              <label class="flabel" for="count">タップ個数</label>
+              <div class="unit-wrap">
+                <input type="number" id="count" value="15" min="2" max="99" step="1" inputmode="numeric" />
+                <span class="unit">個</span>
+              </div>
+            </div>
+            <div class="field" id="pitchField">
+              <label class="flabel" for="pitch">配置ピッチ</label>
+              <div class="unit-wrap">
+                <input type="number" id="pitch" value="150" min="1" step="1" inputmode="decimal" />
+                <span class="unit">mm</span>
+              </div>
+            </div>
+          </div>
+          <div class="field cond" id="pcdField">
+            <label class="flabel" for="pcd">PCD（ピッチ円直径）</label>
+            <div class="unit-wrap">
+              <input type="number" id="pcd" value="300" min="10" step="1" inputmode="decimal" />
+              <span class="unit">φ mm</span>
+            </div>
+            <div class="hint">角度ピッチは 360° ÷ 個数 で自動計算します。</div>
+          </div>
+          <div class="field" id="endDistField">
+            <label class="flabel" for="endDist">端から最初の穴まで（位置決め）</label>
+            <div class="unit-wrap">
+              <input type="number" id="endDist" value="50" min="0" step="1" inputmode="decimal" />
+              <span class="unit">mm</span>
+            </div>
+          </div>
+        </fieldset>
+
+        <div class="divider"></div>
+
+        <fieldset>
+          <legend>穴の仕様</legend>
+          <div class="seg" role="group" aria-label="貫通か止まりか" style="margin-bottom:12px">
+            <button type="button" id="segThru" aria-pressed="true">通し（貫通）</button>
+            <button type="button" id="segBlind" aria-pressed="false">止まり（深さ指定）</button>
+          </div>
+          <div class="cond" id="depthFields">
+            <div class="row2">
+              <div class="field">
+                <label class="flabel" for="threadDepth">有効ねじ深さ</label>
+                <div class="unit-wrap">
+                  <input type="number" id="threadDepth" value="12" min="1" step="0.5" inputmode="decimal" />
+                  <span class="unit">mm</span>
+                </div>
+              </div>
+              <div class="field">
+                <label class="flabel" for="drillDepth">下穴深さ</label>
+                <div class="unit-wrap">
+                  <input type="number" id="drillDepth" value="15" min="1" step="0.5" inputmode="decimal" />
+                  <span class="unit">mm</span>
+                </div>
+              </div>
+            </div>
+            <div class="hint">有効ねじ深さと下穴深さは分けて書きます。</div>
+          </div>
+        </fieldset>
+
+        <fieldset id="dimFormatField">
+          <legend>ピッチ寸法の表記形式</legend>
+          <select id="dimFormat">
+            <option value="placeholder" selected>14×150=&lt;&gt; 形式（AutoCAD用）</option>
+            <option value="value">14×150=2100 形式（計算値を表示）</option>
+          </select>
+          <div class="hint"><b>&lt;&gt;</b> はAutoCADの寸法値プレースホルダです。寸法テキストの上書きにこのまま貼ると、実測の全長に置き換わって表示されます。</div>
+        </fieldset>
+
+      </div>
+    </section>
+
+    <!-- ===== 出力 ===== -->
+    <div class="stack">
+
+      <section class="card" aria-label="生成される表記">
+        <div class="card-h"><h2>生成される表記</h2><span>ボタンでコピーできます</span></div>
+        <div class="card-b">
+          <div class="out-list">
+            <div class="out">
+              <div class="txt">
+                <div class="lbl">タップ指示（代表穴への引出線注記）</div>
+                <div class="val mono" id="outTap">15-M4 通し</div>
+              </div>
+              <button type="button" class="copy" data-copy="outTap">コピー</button>
+            </div>
+
+            <div class="out main">
+              <div class="txt">
+                <div class="lbl" id="pitchDimLabel">ピッチ寸法（寸法テキスト上書き用）</div>
+                <div class="val mono" id="outPitchDim">14×150=&lt;&gt;</div>
+              </div>
+              <button type="button" class="copy" data-copy="outPitchDim">コピー</button>
+            </div>
+
+            <div class="out" id="outExtraWrap" style="display:none">
+              <div class="txt">
+                <div class="lbl" id="outExtraLabel">配置注記</div>
+                <div class="val mono" id="outExtra"></div>
+              </div>
+              <button type="button" class="copy" data-copy="outExtra">コピー</button>
+            </div>
+          </div>
+
+          <div style="height:12px"></div>
+          <div class="checkline" id="checkline"></div>
+        </div>
+      </section>
+
+      <section class="card" aria-label="図面プレビュー">
+        <div class="card-h"><h2>図面プレビュー</h2><span>寸法の入り方のイメージ</span></div>
+        <div class="card-b">
+          <div class="preview" id="preview"></div>
+          <p class="fig-note" id="figNote"></p>
+        </div>
+      </section>
+
+      <section class="card" aria-label="参考値">
+        <div class="card-h"><h2>参考値</h2><span>並目タップ</span></div>
+        <div class="card-b">
+          <div class="ref-grid">
+            <div class="ref"><div class="k">タップ下穴径（並目）</div><div class="v mono" id="refDrill">φ3.3</div></div>
+            <div class="ref"><div class="k">並目ピッチ</div><div class="v mono" id="refPitch">0.7 <small>mm</small></div></div>
+            <div class="ref"><div class="k" id="refSpanLabel">全長（端〜端の穴間）</div><div class="v mono" id="refSpan">2100 <small>mm</small></div></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="card" aria-label="書き方のポイント">
+        <div class="card-h"><h2>書き方のポイント</h2></div>
+        <div class="card-b">
+          <ul class="notes">
+            <li><b>仕様は一括、位置は繰り返し。</b>タップ仕様は代表1穴の引出線に <span class="mono">個数−ねじ寸法</span> でまとめ、残りの穴は中心線だけでも成立します。</li>
+            <li><b>間隔の数は「個数−1」。</b>15個なら間隔は14箇所なので、ピッチ寸法は <span class="mono">14×150=&lt;&gt;</span> となります。</li>
+            <li><b>2種類のピッチを混同しない。</b>ねじピッチ（M4並目＝0.7）は呼びに含め、配置ピッチ（150mm）は寸法線側に書きます。</li>
+            <li><b>円周配置は「等配」を明記。</b><span class="mono">PCDφ○○ 等配</span> とし、角度ピッチもあわせて示すと読み違いがありません。</li>
+          </ul>
+        </div>
+      </section>
+
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast" role="status" aria-live="polite">コピーしました</div>
+
+<script>
+(function(){
+  "use strict";
+
+  // 並目ピッチとタップ下穴径（標準値）
+  var THREADS = {
+    "3":  { coarse: 0.5,  drill: 2.5 },
+    "4":  { coarse: 0.7,  drill: 3.3 },
+    "5":  { coarse: 0.8,  drill: 4.2 },
+    "6":  { coarse: 1.0,  drill: 5.0 },
+    "8":  { coarse: 1.25, drill: 6.8 },
+    "10": { coarse: 1.5,  drill: 8.5 },
+    "12": { coarse: 1.75, drill: 10.25 },
+    "16": { coarse: 2.0,  drill: 14.0 },
+    "20": { coarse: 2.5,  drill: 17.5 }
+  };
+
+  var state = { arrangement: "linear", holeType: "thru" };
+
+  function $(id){ return document.getElementById(id); }
+  function num(id, fallback){
+    var v = parseFloat($(id).value);
+    return isNaN(v) ? fallback : v;
+  }
+  function fmt(n){
+    if (Math.abs(n - Math.round(n)) < 1e-9) return String(Math.round(n));
+    return String(Math.round(n * 100) / 100);
+  }
+  function esc(s){
+    return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+  }
+
+  /* ---------- セグメント切替 ---------- */
+  function setSeg(onId, offId, value, key){
+    $(onId).setAttribute("aria-pressed","true");
+    $(offId).setAttribute("aria-pressed","false");
+    state[key] = value;
+    render();
+  }
+  $("segLinear").addEventListener("click", function(){ setSeg("segLinear","segCircular","linear","arrangement"); });
+  $("segCircular").addEventListener("click", function(){ setSeg("segCircular","segLinear","circular","arrangement"); });
+  $("segThru").addEventListener("click", function(){ setSeg("segThru","segBlind","thru","holeType"); });
+  $("segBlind").addEventListener("click", function(){ setSeg("segBlind","segThru","blind","holeType"); });
+
+  ["threadSize","threadKind","count","pitch","pcd","endDist","finePitch","threadDepth","drillDepth","dimFormat"]
+    .forEach(function(id){
+      $(id).addEventListener("input", render);
+      $(id).addEventListener("change", render);
+    });
+
+  /* ---------- コピー ---------- */
+  var toastTimer = null;
+  function showToast(msg){
+    var t = $("toast");
+    t.textContent = msg;
+    t.classList.add("show");
+    if (toastTimer) clearTimeout(toastTimer);
+    toastTimer = setTimeout(function(){ t.classList.remove("show"); }, 1800);
+  }
+  document.querySelectorAll("button.copy").forEach(function(btn){
+    btn.addEventListener("click", function(){
+      var text = $(btn.getAttribute("data-copy")).textContent;
+      function done(){
+        btn.textContent = "コピー済み";
+        btn.classList.add("done");
+        showToast("コピーしました：" + text);
+        setTimeout(function(){ btn.textContent = "コピー"; btn.classList.remove("done"); }, 1800);
+      }
+      if (navigator.clipboard && navigator.clipboard.writeText){
+        navigator.clipboard.writeText(text).then(done, function(){ fallback(); });
+      } else { fallback(); }
+      function fallback(){
+        var ta = document.createElement("textarea");
+        ta.value = text;
+        ta.style.position = "fixed"; ta.style.opacity = "0";
+        document.body.appendChild(ta);
+        ta.select();
+        try { document.execCommand("copy"); done(); }
+        catch(e){ showToast("コピーできませんでした。テキストを長押しで選択してください"); }
+        document.body.removeChild(ta);
+      }
+    });
+  });
+
+  /* ---------- メイン描画 ---------- */
+  function render(){
+    var size = $("threadSize").value;
+    var info = THREADS[size];
+    var fine = $("threadKind").value === "fine";
+    var count = Math.max(2, Math.min(99, Math.floor(num("count", 15))));
+    var pitch = Math.max(0, num("pitch", 150));
+    var pcd = Math.max(0, num("pcd", 300));
+    var endDist = Math.max(0, num("endDist", 50));
+    var circular = state.arrangement === "circular";
+    var blind = state.holeType === "blind";
+    var usePlaceholder = $("dimFormat").value === "placeholder";
+
+    // 条件フィールドの表示切替
+    $("finePitchField").classList.toggle("show", fine);
+    $("pitchField").style.display = circular ? "none" : "";
+    $("pcdField").classList.toggle("show", circular);
+    $("endDistField").style.display = circular ? "none" : "";
+    $("depthFields").classList.toggle("show", blind);
+    $("dimFormatField").style.display = circular ? "none" : "";
+
+    $("coarseInfo").innerHTML = "M" + size + " 並目ピッチは <b>" + fmt(info.coarse) + "mm</b> のため、並目では呼びにピッチを書きません。";
+
+    /* --- タップ指示 --- */
+    var call = "M" + size;
+    if (fine){
+      var fp = num("finePitch", 0.5);
+      if (fp > 0) call += "×" + fmt(fp);
+    }
+    var tap = count + "-" + call;
+    if (blind){
+      tap += " 深さ" + fmt(num("threadDepth", 12)) + " 下穴深さ" + fmt(num("drillDepth", 15));
+    } else {
+      tap += " 通し";
+    }
+    $("outTap").textContent = tap;
+
+    /* --- ピッチ寸法・配置注記 --- */
+    var intervals = count - 1;
+    var total = intervals * pitch;
+    var angle = 360 / count;
+
+    if (!circular){
+      var rhs = usePlaceholder ? "<>" : fmt(total);
+      $("outPitchDim").textContent = intervals + "×" + fmt(pitch) + "=" + rhs;
+      $("pitchDimLabel").textContent = "ピッチ寸法（寸法テキスト上書き用）";
+      $("outExtraWrap").style.display = "none";
+      $("checkline").innerHTML =
+        "<span>検算： <span class='mono'>" + intervals + " × " + fmt(pitch) + " = " + fmt(total) + " mm</span></span>" +
+        "<span>端から最後の穴まで： <span class='mono'>" + fmt(endDist + total) + " mm</span></span>";
+      $("refSpanLabel").textContent = "全長（端〜端の穴間）";
+      $("refSpan").innerHTML = fmt(total) + " <small>mm</small>";
+      $("figNote").textContent = "下段の全体寸法に「" + intervals + "×" + fmt(pitch) + "=" + (usePlaceholder ? "<>" : fmt(total)) + "」を入れ、上段で端の位置決めと最初の1ピッチを押さえる形です。中間の穴位置は繰り返し表記で兼ねます。";
+    } else {
+      $("outPitchDim").textContent = fmt(angle) + "° 等配";
+      $("pitchDimLabel").textContent = "角度ピッチ（円周配置）";
+      $("outExtraLabel").textContent = "配置注記（タップ指示に続けて記入）";
+      $("outExtra").textContent = "PCDφ" + fmt(pcd) + " 等配";
+      $("outExtraWrap").style.display = "";
+      $("checkline").innerHTML =
+        "<span>角度ピッチ： <span class='mono'>360° ÷ " + count + " = " + fmt(angle) + "°</span></span>" +
+        "<span>隣り合う穴の弧長（PCD上）： <span class='mono'>約 " + fmt(Math.PI * pcd / count) + " mm</span></span>";
+      $("refSpanLabel").textContent = "角度ピッチ";
+      $("refSpan").innerHTML = fmt(angle) + " <small>°</small>";
+      $("figNote").textContent = "円周配置では、タップ指示に「PCDφ" + fmt(pcd) + " 等配」を続け、角度ピッチ " + fmt(angle) + "° を示します。";
+    }
+
+    $("refDrill").textContent = "φ" + fmt(info.drill);
+    $("refPitch").innerHTML = fmt(info.coarse) + " <small>mm</small>";
+
+    $("preview").innerHTML = circular
+      ? svgCircular(count, pcd, size, angle)
+      : svgLinear(count, pitch, endDist, total, size, usePlaceholder);
+  }
+
+  /* ---------- SVG：直線配置 ---------- */
+  function svgLinear(count, pitch, endDist, total, size, usePlaceholder){
+    var holesToShow = Math.min(count, 15);
+    var span = Math.max(total, pitch); // 表示用の穴間距離
+    var W = 720, padL = 78, padR = 30;
+    var plotW = W - padL - padR;
+    var scale = span > 0 ? plotW / (endDist + span + Math.max(endDist, pitch * 0.4)) : 1;
+    var x0 = padL; // 左端面
+    var hx = [];
+    var i, x;
+    for (i = 0; i < holesToShow; i++){
+      hx.push(x0 + (endDist + i * pitch) * scale);
+    }
+    var plateRight = hx[hx.length - 1] + Math.max(endDist, pitch * 0.4) * scale;
+    var cy = 128, r = Math.max(5, Math.min(9, 340 / holesToShow));
+    var s = "";
+    s += "<svg viewBox='0 0 " + W + " 236' role='img' aria-label='直線配置のプレビュー'>";
+    // 板
+    s += "<rect x='" + x0 + "' y='92' width='" + (plateRight - x0) + "' height='72' fill='none' stroke='var(--ink-3)' stroke-width='1.2'/>";
+    // 中心線
+    s += "<line x1='" + (x0 - 16) + "' y1='" + cy + "' x2='" + (plateRight + 14) + "' y2='" + cy + "' stroke='var(--accent)' stroke-width='0.8' stroke-dasharray='14 3 2 3' opacity='0.7'/>";
+    // 穴
+    for (i = 0; i < hx.length; i++){
+      x = hx[i];
+      s += "<circle cx='" + x + "' cy='" + cy + "' r='" + r + "' fill='none' stroke='var(--ink)' stroke-width='1.4'/>";
+      s += "<line x1='" + (x - r - 4) + "' y1='" + cy + "' x2='" + (x + r + 4) + "' y2='" + cy + "' stroke='var(--accent)' stroke-width='0.7' opacity='0.65'/>";
+      s += "<line x1='" + x + "' y1='" + (cy - r - 4) + "' x2='" + x + "' y2='" + (cy + r + 4) + "' stroke='var(--accent)' stroke-width='0.7' opacity='0.65'/>";
+    }
+    if (count > holesToShow){
+      s += "<text x='" + (plateRight - 4) + "' y='" + (cy - r - 10) + "' text-anchor='end' font-size='12' fill='var(--ink-2)'>… 全" + count + "個</text>";
+    }
+    // 引出線注記
+    var lx = hx[0];
+    s += "<line x1='" + lx + "' y1='" + (cy - r) + "' x2='" + (lx + 34) + "' y2='52' stroke='var(--ink-2)' stroke-width='0.9'/>";
+    s += "<line x1='" + (lx + 34) + "' y1='52' x2='" + (lx + 44) + "' y2='52' stroke='var(--ink-2)' stroke-width='0.9'/>";
+    s += "<text x='" + (lx + 48) + "' y='56' font-size='14' font-weight='700' fill='var(--ink)' class='mono'>" + esc($("outTap").textContent) + "</text>";
+
+    // 上段寸法：端位置決め＋最初のピッチ
+    s += dimH(x0, hx[0], 84, fmt(endDist), true);
+    if (hx.length > 1) s += dimH(hx[0], hx[1], 84, fmt(pitch), true);
+    // 下段寸法：全体（繰り返し表記）
+    var rhs = usePlaceholder ? "<>" : fmt(total);
+    s += dimH(hx[0], hx[hx.length - 1], 196,
+      (count - 1) + "×" + fmt(pitch) + "=" + rhs, false);
+    s += "</svg>";
+    return s;
+  }
+
+  function dimH(x1, x2, y, label, small){
+    if (x2 - x1 < 4) return "";
+    var fs = small ? 12.5 : 14.5;
+    var s = "";
+    s += "<line x1='" + x1 + "' y1='" + (y - 5) + "' x2='" + x1 + "' y2='" + (y + 5) + "' stroke='var(--ink-2)' stroke-width='0.8'/>";
+    s += "<line x1='" + x2 + "' y1='" + (y - 5) + "' x2='" + x2 + "' y2='" + (y + 5) + "' stroke='var(--ink-2)' stroke-width='0.8'/>";
+    s += "<line x1='" + x1 + "' y1='" + y + "' x2='" + x2 + "' y2='" + y + "' stroke='var(--ink-2)' stroke-width='0.8'/>";
+    s += "<path d='M" + x1 + " " + y + " l8 -2.6 v5.2 z' fill='var(--ink-2)'/>";
+    s += "<path d='M" + x2 + " " + y + " l-8 -2.6 v5.2 z' fill='var(--ink-2)'/>";
+    var mid = (x1 + x2) / 2;
+    var w = label.length * fs * 0.62 + 10;
+    if (x2 - x1 < w && small){
+      s += "<text x='" + mid + "' y='" + (y - 8) + "' text-anchor='middle' font-size='" + fs + "' fill='var(--ink)' class='mono'>" + esc(label) + "</text>";
+    } else {
+      s += "<rect x='" + (mid - w / 2) + "' y='" + (y - fs * 0.72) + "' width='" + w + "' height='" + (fs * 1.3) + "' fill='var(--panel-2)'/>";
+      s += "<text x='" + mid + "' y='" + (y + fs * 0.36) + "' text-anchor='middle' font-size='" + fs + "' font-weight='" + (small ? "400" : "700") + "' fill='var(--ink)' class='mono'>" + esc(label) + "</text>";
+    }
+    return s;
+  }
+
+  /* ---------- SVG：円周配置 ---------- */
+  function svgCircular(count, pcd, size, angle){
+    var W = 720, H = 330, cx = 300, cy = 165;
+    var R = 118, hr = 10;
+    var s = "";
+    s += "<svg viewBox='0 0 " + W + " " + H + "' role='img' aria-label='円周配置のプレビュー'>";
+    // 外形の目安
+    s += "<circle cx='" + cx + "' cy='" + cy + "' r='" + (R + 30) + "' fill='none' stroke='var(--ink-3)' stroke-width='1.2'/>";
+    // PCD
+    s += "<circle cx='" + cx + "' cy='" + cy + "' r='" + R + "' fill='none' stroke='var(--accent)' stroke-width='0.9' stroke-dasharray='14 3 2 3' opacity='0.75'/>";
+    // 中心マーク
+    s += "<line x1='" + (cx - R - 44) + "' y1='" + cy + "' x2='" + (cx + R + 44) + "' y2='" + cy + "' stroke='var(--accent)' stroke-width='0.7' stroke-dasharray='14 3 2 3' opacity='0.55'/>";
+    s += "<line x1='" + cx + "' y1='" + (cy - R - 44) + "' x2='" + cx + "' y2='" + (cy + R + 44) + "' stroke='var(--accent)' stroke-width='0.7' stroke-dasharray='14 3 2 3' opacity='0.55'/>";
+    var pts = [];
+    for (var i = 0; i < count; i++){
+      var a = -Math.PI / 2 + i * 2 * Math.PI / count;
+      var px = cx + R * Math.cos(a), py = cy + R * Math.sin(a);
+      pts.push([px, py]);
+      s += "<circle cx='" + px + "' cy='" + py + "' r='" + hr + "' fill='var(--panel-2)' stroke='var(--ink)' stroke-width='1.4'/>";
+      s += "<line x1='" + (px - hr - 4) + "' y1='" + py + "' x2='" + (px + hr + 4) + "' y2='" + py + "' stroke='var(--accent)' stroke-width='0.7' opacity='0.65'/>";
+      s += "<line x1='" + px + "' y1='" + (py - hr - 4) + "' x2='" + px + "' y2='" + (py + hr + 4) + "' stroke='var(--accent)' stroke-width='0.7' opacity='0.65'/>";
+    }
+    // 角度ピッチ（最初の2穴間）
+    if (pts.length > 1){
+      s += "<line x1='" + cx + "' y1='" + cy + "' x2='" + pts[0][0] + "' y2='" + pts[0][1] + "' stroke='var(--ink-2)' stroke-width='0.8'/>";
+      s += "<line x1='" + cx + "' y1='" + cy + "' x2='" + pts[1][0] + "' y2='" + pts[1][1] + "' stroke='var(--ink-2)' stroke-width='0.8'/>";
+      var midA = -Math.PI / 2 + Math.PI / count;
+      var tx = cx + (R * 0.52) * Math.cos(midA), ty = cy + (R * 0.52) * Math.sin(midA);
+      s += "<text x='" + tx + "' y='" + ty + "' text-anchor='middle' font-size='13.5' font-weight='700' fill='var(--ink)' class='mono'>" + fmt(angle) + "°</text>";
+    }
+    // 注記テキスト
+    var nx = 478;
+    s += "<text x='" + nx + "' y='128' font-size='15' font-weight='700' fill='var(--ink)' class='mono'>" + esc($("outTap").textContent) + "</text>";
+    s += "<text x='" + nx + "' y='154' font-size='15' font-weight='700' fill='var(--ink)' class='mono'>PCDφ" + fmt(pcd) + " 等配</text>";
+    s += "<text x='" + nx + "' y='184' font-size='13' fill='var(--ink-2)'>角度ピッチ " + fmt(angle) + "° 等配</text>";
+    s += "<text x='" + nx + "' y='206' font-size='13' fill='var(--ink-2)'>個数 " + count + "個</text>";
+    // 引出線
+    s += "<line x1='" + pts[0][0] + "' y1='" + pts[0][1] + "' x2='" + (nx - 12) + "' y2='120' stroke='var(--ink-2)' stroke-width='0.9'/>";
+    s += "</svg>";
+    return s;
+  }
+
+  render();
+})();
+</script>
+</body>
+</html>
